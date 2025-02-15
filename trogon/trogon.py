@@ -222,6 +222,9 @@ class Trogon(App[None]):
     def get_default_screen(self) -> CommandBuilder:
         return CommandBuilder(self.cli, self.app_name, self.command_name)
 
+    def on_mount(self):
+        self.theme = 'tokyo-night'
+
     @on(Button.Pressed, "#home-exec-button")
     def on_button_pressed(self):
         self.execute_on_exit = True
