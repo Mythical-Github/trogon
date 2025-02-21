@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import shlex
-from importlib import metadata  # type: ignore
+import subprocess
 from pathlib import Path
 from typing import Any
 from webbrowser import open as open_url
@@ -37,6 +37,12 @@ from trogon.widgets.command_info import CommandInfo
 from trogon.widgets.command_tree import CommandTree
 from trogon.widgets.form import CommandForm
 from trogon.widgets.multiple_choice import NonFocusableVerticalScroll
+
+try:
+    from importlib import metadata  # type: ignore
+except ImportError:
+    # Python < 3.8
+    import importlib_metadata as metadata  # type: ignore
 
 
 class CommandBuilder(Screen[None]):
@@ -248,13 +254,18 @@ class Trogon(App[None]):
                 console = Console()
                 if self.post_run_command and self.execute_on_exit:
                     console.print(
-                        f"Running [b cyan]{self.app_name} {' '.join(shlex.quote(s) for s in self.post_run_command)}[/]"
+                        f"Running [b cyan]{self.app_name} {' '.join(f'\"{s}\"' if ' ' in s or '\"' in s else s for s in self.post_run_command)}[/]"
+                        if os.name == "nt"
+                        else f"Running [b cyan]{self.app_name} {' '.join(shlex.quote(s) for s in self.post_run_command)}[/]"
                     )
-
                     split_app_name = shlex.split(self.app_name)
                     program_name = shlex.split(self.app_name)[0]
                     arguments = [*split_app_name, *self.post_run_command]
-                    os.execvp(program_name, arguments)
+                    if os.name == "nt":
+                        windows_command = " ".join(f'"{arg}"' if " " in arg else arg for arg in arguments)
+                        subprocess.run(windows_command)
+                    else:
+                        os.execvp(program_name, new_args)
 
     @on(CommandForm.Changed)
     def update_command_to_run(self, event: CommandForm.Changed):
